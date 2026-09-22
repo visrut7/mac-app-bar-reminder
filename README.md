@@ -23,13 +23,20 @@ Grab the latest build from
 
 TwoDo isn't notarized by Apple (that requires a paid Developer ID), so on
 first launch Gatekeeper will refuse to open it with an *"Apple could not
-verify..."* warning. This is normal for indie/open-source Mac apps — do
-**one** of the following:
+verify..."* warning, and double-clicking again just gives you a dead-end
+"Not Opened" dialog with no way through. This is normal for indie/open-source
+Mac apps — do **one** of the following, once:
 
-- Right-click (or Control-click) `TwoDo.app` in Finder → **Open** → **Open**
-  in the dialog that appears. Only needed once.
-- Or: **System Settings → Privacy & Security**, scroll down, click **Open
-  Anyway** next to the TwoDo message.
+- **Terminal (fastest, permanent for that copy):**
+  ```bash
+  xattr -cr /Applications/TwoDo.app
+  ```
+  This strips the quarantine flag Finder/your browser tagged the download
+  with. After this, double-click opens it with no dialog at all, every time.
+- **Or, staying in the GUI:** **System Settings → Privacy & Security**,
+  scroll down to the blocked-app message, click **Open Anyway**, then open
+  TwoDo again — that triggers a proper confirm dialog with an actual **Open**
+  button (unlike the dead-end one from double-clicking).
 
 Once open, click the checklist icon in the menu bar and toggle **Launch at
 Login** if you want it to auto-open every time you log in. If macOS hides
