@@ -91,19 +91,21 @@ test the "Launch at Login" toggle.
 
 ## Releasing a new version (maintainers)
 
-Pushing a tag matching `v*` triggers
-[`.github/workflows/release.yml`](.github/workflows/release.yml), which
-builds the app on a macOS GitHub Actions runner, packages both a `.dmg` and
-`.app.zip`, and publishes them to a new GitHub Release automatically:
-
 ```bash
 git tag v1.1.0
 git push origin v1.1.0
 ```
 
+Pushing a tag matching `v*` is the only manual step — it triggers
+[`.github/workflows/release.yml`](.github/workflows/release.yml), which
+builds the app on a macOS GitHub Actions runner, packages both a `.dmg` and
+`.app.zip`, and publishes them to a new GitHub Release automatically.
 Every push to `main` also runs
 [`.github/workflows/ci.yml`](.github/workflows/ci.yml), which builds the app
 to catch breakage before you ever tag a release.
+
+See **[RELEASING.md](RELEASING.md)** for the exact commands to watch a
+release build and verify it actually published.
 
 ## Project structure
 
