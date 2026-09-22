@@ -44,7 +44,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // the login item (see "Launch at Login" toggle in TodoStore), so
         // every launch — including the one macOS triggers at login — opens
         // straight into the popover near the menu bar, no click required.
-        DispatchQueue.main.async { [weak self] in
+        //
+        // The delay matters: at login, several other login-item apps are
+        // typically launching and activating themselves at the same time.
+        // A `.transient` NSPopover auto-closes the instant its owning app
+        // loses active status, so showing it immediately risks it being
+        // stolen-focus-closed before it's ever perceived. Waiting lets that
+        // initial login-time activation churn settle first.
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) { [weak self] in
             self?.showPopover()
         }
     }
@@ -88,8 +95,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     private func showPopover() {
         guard let button = statusItem.button else { return }
-        popover.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
+        // Activate *before* showing — a transient popover shown by an
+        // inactive app is more likely to be immediately closed if another
+        // app grabs activation right after.
         NSApp.activate(ignoringOtherApps: true)
+        popover.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
     }
 
     private func closePopover() {
