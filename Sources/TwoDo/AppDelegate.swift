@@ -4,7 +4,6 @@ import SwiftUI
 final class AppDelegate: NSObject, NSApplicationDelegate {
     private var statusItem: NSStatusItem!
     private var popover: NSPopover!
-    private var eventMonitor: Any?
     private let store = TodoStore()
 
     func applicationDidFinishLaunching(_ notification: Notification) {
@@ -25,19 +24,23 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
 
         popover = NSPopover()
-        popover.behavior = .transient
+        // .applicationDefined = the popover never closes itself. It's a
+        // reminder — it should stay put until you explicitly acknowledge
+        // it (the "GOT IT" button), not vanish the moment you click
+        // somewhere else or switch apps.
+        popover.behavior = .applicationDefined
         popover.contentSize = NSSize(width: 300, height: 420)
         popover.contentViewController = NSHostingController(rootView: ContentView(store: store))
-
-        // Dismiss the popover on any click outside it.
-        eventMonitor = NSEvent.addGlobalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown]) { [weak self] _ in
-            self?.closePopover()
-        }
 
         // A daily schedule coming due while the app is already running
         // should surface the popover, same as the login auto-show below.
         store.onScheduledTrigger = { [weak self] in
             self?.showPopover()
+        }
+
+        // The only thing that closes the popover.
+        store.onAcknowledge = { [weak self] in
+            self?.closePopover()
         }
 
         // This is what makes it act like a login pop-up: the app itself is
@@ -105,11 +108,5 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private func closePopover() {
         guard popover.isShown else { return }
         popover.performClose(nil)
-    }
-
-    func applicationWillTerminate(_ notification: Notification) {
-        if let monitor = eventMonitor {
-            NSEvent.removeMonitor(monitor)
-        }
     }
 }

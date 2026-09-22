@@ -13,6 +13,10 @@ struct ContentView: View {
                 .padding(.bottom, 14)
 
             VStack(spacing: 10) {
+                if !store.items.isEmpty {
+                    gotItButton
+                }
+
                 ForEach($store.items) { $item in
                     ItemRow(item: $item, onDelete: { store.removeItem(item) })
                 }
@@ -62,6 +66,26 @@ struct ContentView: View {
             .padding(.horizontal, 16)
             .padding(.top, 4)
             .padding(.bottom, 10)
+    }
+
+    /// The only thing that closes the popover — deliberately, not by
+    /// accident. See `TodoStore.onAcknowledge`.
+    private var gotItButton: some View {
+        Button(action: { store.onAcknowledge?() }) {
+            HStack(spacing: 6) {
+                Image(systemName: "checkmark")
+                    .font(.system(size: 11, weight: .bold))
+                Text("GOT IT")
+                    .font(.system(size: 12, weight: .heavy))
+                    .tracking(1)
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 11)
+            .background(Theme.textPrimary)
+            .foregroundColor(.black)
+            .cornerRadius(4)
+        }
+        .buttonStyle(.plain)
     }
 
     private var addButton: some View {

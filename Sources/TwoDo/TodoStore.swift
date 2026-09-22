@@ -21,6 +21,11 @@ final class TodoStore: ObservableObject {
     /// running. AppDelegate wires this to `showPopover()`.
     var onScheduledTrigger: (() -> Void)?
 
+    /// Fired when the user explicitly dismisses the popover (the "GOT IT"
+    /// button) — the *only* thing that closes it. AppDelegate wires this
+    /// to `closePopover()`.
+    var onAcknowledge: (() -> Void)?
+
     private var scheduleTimer: Timer?
     private var lastFiredDay: [UUID: String] = [:]
     private static let dayFormatter: DateFormatter = {
