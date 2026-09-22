@@ -31,7 +31,7 @@ struct ContentView: View {
 
             footer
         }
-        .frame(width: 300, height: 380)
+        .frame(width: 300, height: 420)
         .background(Theme.background)
         .foregroundColor(Theme.textPrimary)
     }
@@ -69,7 +69,7 @@ struct ContentView: View {
             HStack(spacing: 6) {
                 Image(systemName: "plus")
                     .font(.system(size: 11, weight: .bold))
-                Text("ADD FOCUS ITEM")
+                Text("ADD REMINDER")
                     .font(.system(size: 11, weight: .bold))
                     .tracking(1)
             }
@@ -84,12 +84,13 @@ struct ContentView: View {
 
     private var emptyState: some View {
         VStack(spacing: 4) {
-            Text("NOTHING ON THE CARD")
+            Text("NOTHING SET")
                 .font(.system(size: 11, weight: .bold))
                 .tracking(1)
                 .foregroundColor(Theme.textSecondary)
-            Text("Add up to two things worth doing today.")
+            Text("Add up to two recurring reminders — chores,\nfollow-ups, whatever you keep forgetting.")
                 .font(.system(size: 11))
+                .multilineTextAlignment(.center)
                 .foregroundColor(Theme.textSecondary.opacity(0.8))
         }
         .padding(.vertical, 12)
@@ -130,33 +131,32 @@ private struct ItemRow: View {
     @FocusState private var isFocused: Bool
 
     var body: some View {
-        HStack(spacing: 10) {
-            Rectangle()
-                .fill(Theme.red)
-                .frame(width: 3, height: 20)
-                .cornerRadius(1)
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 10) {
+                Rectangle()
+                    .fill(Theme.red)
+                    .frame(width: 3, height: 20)
+                    .cornerRadius(1)
 
-            Button(action: { item.isDone.toggle() }) {
-                Image(systemName: item.isDone ? "checkmark.square.fill" : "square")
-                    .foregroundColor(item.isDone ? Theme.red : Theme.textSecondary)
+                TextField("What do you keep forgetting?", text: $item.text)
+                    .textFieldStyle(.plain)
+                    .font(.system(size: 13, weight: .medium))
+                    .foregroundColor(Theme.textPrimary)
+                    .focused($isFocused)
+                    .onSubmit { isFocused = false }
+
+                Button(action: onDelete) {
+                    Image(systemName: "xmark")
+                        .font(.system(size: 10, weight: .bold))
+                        .foregroundColor(Theme.textSecondary)
+                }
+                .buttonStyle(.plain)
             }
-            .buttonStyle(.plain)
 
-            TextField("Focus item…", text: $item.text)
-                .textFieldStyle(.plain)
-                .font(.system(size: 13, weight: .medium))
-                .strikethrough(item.isDone, color: Theme.textSecondary)
-                .foregroundColor(item.isDone ? Theme.textSecondary : Theme.textPrimary)
-                .focused($isFocused)
-
-            Button(action: onDelete) {
-                Image(systemName: "xmark")
-                    .font(.system(size: 10, weight: .bold))
-                    .foregroundColor(Theme.textSecondary)
-            }
-            .buttonStyle(.plain)
+            scheduleControl
+                .padding(.leading, 13) // align under the text, past the accent bar
         }
-        .padding(.vertical, 8)
+        .padding(.vertical, 10)
         .padding(.horizontal, 10)
         .background(Theme.surface)
         .overlay(
@@ -164,5 +164,58 @@ private struct ItemRow: View {
                 .stroke(Theme.border, lineWidth: 1)
         )
         .cornerRadius(4)
+    }
+
+    private var scheduleControl: some View {
+        HStack(spacing: 6) {
+            scheduleToggle(label: "AT LOGIN", isSelected: item.schedule == .atLogin) {
+                item.schedule = .atLogin
+            }
+
+            scheduleToggle(label: "DAILY", isSelected: item.schedule.isDailyAt) {
+                if !item.schedule.isDailyAt {
+                    item.schedule = .dailyAt(hour: 9, minute: 0)
+                }
+            }
+
+            if item.schedule.isDailyAt {
+                DatePicker("", selection: dailyTimeBinding, displayedComponents: .hourAndMinute)
+                    .datePickerStyle(.field)
+                    .labelsHidden()
+                    .font(.system(size: 11, weight: .semibold, design: .monospaced))
+                    .fixedSize()
+            }
+
+            Spacer(minLength: 0)
+        }
+    }
+
+    private func scheduleToggle(label: String, isSelected: Bool, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Text(label)
+                .font(.system(size: 9, weight: .bold))
+                .tracking(0.5)
+                .padding(.horizontal, 8)
+                .padding(.vertical, 4)
+                .background(isSelected ? Theme.red : Color.white.opacity(0.06))
+                .foregroundColor(isSelected ? .white : Theme.textSecondary)
+                .cornerRadius(3)
+        }
+        .buttonStyle(.plain)
+    }
+
+    private var dailyTimeBinding: Binding<Date> {
+        Binding<Date>(
+            get: {
+                var comps = DateComponents()
+                comps.hour = item.schedule.hour
+                comps.minute = item.schedule.minute
+                return Calendar.current.date(from: comps) ?? Date()
+            },
+            set: { newDate in
+                let comps = Calendar.current.dateComponents([.hour, .minute], from: newDate)
+                item.schedule = .dailyAt(hour: comps.hour ?? 9, minute: comps.minute ?? 0)
+            }
+        )
     }
 }
