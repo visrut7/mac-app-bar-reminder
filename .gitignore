@@ -1,0 +1,11 @@
+.build/
+build/
+.swiftpm/
+.DS_Store
+*.xcuserstate
+DerivedData/
+*.xcodeproj/xcuserdata/
+*.xcworkspace/xcuserdata/
+
+# Intermediate icon PNGs — only the final AppIcon.icns is committed.
+Resources/AppIcon.iconset/

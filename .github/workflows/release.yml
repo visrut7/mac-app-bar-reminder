@@ -1,0 +1,47 @@
+name: Release
+
+# Push a tag like `v1.2.0` to build TwoDo and publish it as a GitHub
+# Release, with both a .dmg (drag-to-install) and a .zip of the .app.
+#
+#   git tag v1.2.0
+#   git push origin v1.2.0
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-release:
+    runs-on: macos-14
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Derive version from tag
+        id: version
+        run: echo "version=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
+
+      - name: Build TwoDo.app
+        run: VERSION="${{ steps.version.outputs.version }}" ./Scripts/build-app.sh
+
+      - name: Package DMG
+        run: ./Scripts/make-dmg.sh
+
+      - name: Zip the .app (alternate download without a DMG)
+        run: |
+          cd build
+          ditto -c -k --sequesterRsrc --keepParent TwoDo.app TwoDo.app.zip
+
+      - name: Create GitHub Release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release create "${{ github.ref_name }}" \
+            build/TwoDo.dmg \
+            build/TwoDo.app.zip \
+            --title "TwoDo ${{ github.ref_name }}" \
+            --generate-notes
