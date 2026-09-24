@@ -29,13 +29,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // it (the "GOT IT" button), not vanish the moment you click
         // somewhere else or switch apps.
         popover.behavior = .applicationDefined
-        popover.contentSize = NSSize(width: 300, height: 420)
+        popover.contentSize = NSSize(width: 300, height: 520)
         popover.contentViewController = NSHostingController(rootView: ContentView(store: store))
 
         // A daily schedule coming due while the app is already running
         // should surface the popover, same as the login auto-show below.
         store.onScheduledTrigger = { [weak self] in
-            self?.showPopover()
+            self?.showPopover(chime: true)
         }
 
         // The only thing that closes the popover.
@@ -55,7 +55,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // stolen-focus-closed before it's ever perceived. Waiting lets that
         // initial login-time activation churn settle first.
         DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) { [weak self] in
-            self?.showPopover()
+            self?.showPopover(chime: true)
         }
     }
 
@@ -96,8 +96,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
 
-    private func showPopover() {
+    /// `chime` is for when the popover opens on its own (login, a daily
+    /// time coming due) — a clicked-open popover doesn't need announcing.
+    private func showPopover(chime: Bool = false) {
         guard let button = statusItem.button else { return }
+        if chime {
+            NSSound(named: "Glass")?.play()
+        }
         // Activate *before* showing — a transient popover shown by an
         // inactive app is more likely to be immediately closed if another
         // app grabs activation right after.

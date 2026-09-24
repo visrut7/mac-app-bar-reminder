@@ -12,30 +12,33 @@ struct ContentView: View {
                 .frame(height: 2)
                 .padding(.bottom, 14)
 
-            VStack(spacing: 10) {
-                if !store.items.isEmpty {
-                    gotItButton
-                }
-
-                ForEach($store.items) { $item in
-                    ItemRow(item: $item, onDelete: { store.removeItem(item) })
-                }
-
-                if store.canAddItem {
-                    addButton
-                }
-
-                if store.items.isEmpty {
-                    emptyState
-                }
+            if !store.items.isEmpty {
+                gotItButton
+                    .padding(.horizontal, 16)
+                    .padding(.bottom, 10)
             }
-            .padding(.horizontal, 16)
 
-            Spacer(minLength: 0)
+            ScrollView {
+                VStack(spacing: 10) {
+                    ForEach($store.items) { $item in
+                        ItemRow(item: $item, onDelete: { store.removeItem(item) })
+                    }
+
+                    if store.canAddItem {
+                        addButton
+                    }
+
+                    if store.items.isEmpty {
+                        emptyState
+                    }
+                }
+                .padding(.horizontal, 16)
+                .padding(.bottom, 12)
+            }
 
             footer
         }
-        .frame(width: 300, height: 420)
+        .frame(width: 300, height: 520)
         .background(Theme.background)
         .foregroundColor(Theme.textPrimary)
     }
@@ -112,7 +115,7 @@ struct ContentView: View {
                 .font(.system(size: 11, weight: .bold))
                 .tracking(1)
                 .foregroundColor(Theme.textSecondary)
-            Text("Add up to two recurring reminders — chores,\nfollow-ups, whatever you keep forgetting.")
+            Text("Add up to \(TodoStore.maxItems) recurring reminders — chores,\nfollow-ups, whatever you keep forgetting.")
                 .font(.system(size: 11))
                 .multilineTextAlignment(.center)
                 .foregroundColor(Theme.textSecondary.opacity(0.8))
@@ -191,27 +194,90 @@ private struct ItemRow: View {
     }
 
     private var scheduleControl: some View {
-        HStack(spacing: 6) {
-            scheduleToggle(label: "AT LOGIN", isSelected: item.schedule == .atLogin) {
-                item.schedule = .atLogin
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(spacing: 6) {
+                scheduleToggle(label: "AT LOGIN", isSelected: item.schedule == .atLogin) {
+                    item.schedule = .atLogin
+                }
+
+                scheduleToggle(label: "DAILY", isSelected: item.schedule.isDaily) {
+                    if !item.schedule.isDaily {
+                        item.schedule = .daily([TimeOfDay(hour: 9, minute: 0)])
+                    }
+                }
+
+                Spacer(minLength: 0)
             }
 
-            scheduleToggle(label: "DAILY", isSelected: item.schedule.isDailyAt) {
-                if !item.schedule.isDailyAt {
-                    item.schedule = .dailyAt(hour: 9, minute: 0)
+            if item.schedule.isDaily {
+                LazyVGrid(
+                    columns: [GridItem(.adaptive(minimum: 100), spacing: 6, alignment: .leading)],
+                    alignment: .leading,
+                    spacing: 6
+                ) {
+                    ForEach(Array(item.schedule.times.enumerated()), id: \.offset) { index, _ in
+                        timeSlot(at: index)
+                    }
+
+                    if item.schedule.times.count < ReminderSchedule.maxDailyTimes {
+                        addTimeButton
+                    }
                 }
             }
-
-            if item.schedule.isDailyAt {
-                DatePicker("", selection: dailyTimeBinding, displayedComponents: .hourAndMinute)
-                    .datePickerStyle(.field)
-                    .labelsHidden()
-                    .font(.system(size: 11, weight: .semibold, design: .monospaced))
-                    .fixedSize()
-            }
-
-            Spacer(minLength: 0)
         }
+    }
+
+    private func timeSlot(at index: Int) -> some View {
+        HStack(spacing: 4) {
+            DatePicker("", selection: timeBinding(at: index), displayedComponents: .hourAndMinute)
+                .datePickerStyle(.field)
+                .labelsHidden()
+                .font(.system(size: 11, weight: .semibold, design: .monospaced))
+                .fixedSize()
+
+            // Removing the last slot would leave a "daily" reminder that
+            // never fires — switch to AT LOGIN for that instead.
+            if item.schedule.times.count > 1 {
+                Button(action: { removeTime(at: index) }) {
+                    Image(systemName: "xmark")
+                        .font(.system(size: 8, weight: .bold))
+                        .foregroundColor(Theme.textSecondary)
+                }
+                .buttonStyle(.plain)
+            }
+        }
+    }
+
+    private var addTimeButton: some View {
+        Button(action: addTime) {
+            HStack(spacing: 3) {
+                Image(systemName: "plus")
+                    .font(.system(size: 8, weight: .bold))
+                Text("TIME")
+                    .font(.system(size: 9, weight: .bold))
+                    .tracking(0.5)
+            }
+            .padding(.horizontal, 8)
+            .padding(.vertical, 4)
+            .background(Color.white.opacity(0.06))
+            .foregroundColor(Theme.textSecondary)
+            .cornerRadius(3)
+        }
+        .buttonStyle(.plain)
+    }
+
+    private func addTime() {
+        var times = item.schedule.times
+        guard times.count < ReminderSchedule.maxDailyTimes else { return }
+        times.append(times.last?.nextHour ?? TimeOfDay(hour: 9, minute: 0))
+        item.schedule = .daily(times)
+    }
+
+    private func removeTime(at index: Int) {
+        var times = item.schedule.times
+        guard times.indices.contains(index), times.count > 1 else { return }
+        times.remove(at: index)
+        item.schedule = .daily(times)
     }
 
     private func scheduleToggle(label: String, isSelected: Bool, action: @escaping () -> Void) -> some View {
@@ -228,17 +294,22 @@ private struct ItemRow: View {
         .buttonStyle(.plain)
     }
 
-    private var dailyTimeBinding: Binding<Date> {
+    private func timeBinding(at index: Int) -> Binding<Date> {
         Binding<Date>(
             get: {
+                let times = item.schedule.times
+                let time = times.indices.contains(index) ? times[index] : TimeOfDay(hour: 9, minute: 0)
                 var comps = DateComponents()
-                comps.hour = item.schedule.hour
-                comps.minute = item.schedule.minute
+                comps.hour = time.hour
+                comps.minute = time.minute
                 return Calendar.current.date(from: comps) ?? Date()
             },
             set: { newDate in
+                var times = item.schedule.times
+                guard times.indices.contains(index) else { return }
                 let comps = Calendar.current.dateComponents([.hour, .minute], from: newDate)
-                item.schedule = .dailyAt(hour: comps.hour ?? 9, minute: comps.minute ?? 0)
+                times[index] = TimeOfDay(hour: comps.hour ?? 9, minute: comps.minute ?? 0)
+                item.schedule = .daily(times)
             }
         )
     }

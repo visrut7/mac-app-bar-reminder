@@ -1,7 +1,7 @@
 # TwoDo
 
-A tiny open-source macOS menu bar app that holds **exactly one or two things
-you actually need to do today** — nothing more. Add your items once, enable
+A tiny open-source macOS menu bar app that holds **up to five recurring
+reminders** — nothing more. Add your items once, enable
 "Launch at Login," and it pops up next to the menu bar the moment you log in.
 
 Visual style is inspired by [Builder Battles](https://builderbattles.app) —
@@ -46,8 +46,10 @@ new menu bar icons (common when the bar is crowded), check **Control Center
 ## Features
 
 - Menu bar icon — click to open, click elsewhere to dismiss
-- Hard cap of **2** items (`0/2` → `2/2` counter in the header) — forces focus
-- Check items off (strikethrough) or delete them
+- Hard cap of **5** reminders (`0/5` → `5/5` counter in the header) — forces focus
+- Each reminder pops up **at login** or **daily** at up to 12 times a day
+  (e.g. 1 PM, 2 PM, 3 PM)
+- Plays a soft chime when the popover opens on its own
 - Persists locally via `UserDefaults` — no accounts, no network, no tracking
 - "Launch at Login" toggle (uses `ServiceManagement`/`SMAppService`) — when
   enabled, the app is itself the login item, so it opens straight into the
@@ -146,7 +148,7 @@ swift Scripts/generate-icon.swift
 ## Why "TwoDo"
 
 Most to-do apps let a backlog pile up until it's useless. This one physically
-can't hold more than two items — so whatever's in there is, by definition,
+can't hold more than five — so whatever's in there is, by definition,
 what actually matters right now.
 
 ## License
